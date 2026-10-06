@@ -6,7 +6,7 @@ let notes = [
 ];
 let idCounter = notes.length;
 
-const CORS_ORIGIN_HEADERS = { "Access-Control-Allow-Origin": "http://localhost:3000" }
+const CORS_ORIGIN_HEADERS = { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "http://localhost:3000" }
 
 const preflightCORSHeaders = {
   ...CORS_ORIGIN_HEADERS,
@@ -95,4 +95,4 @@ const handleRequest = (req, res) => {
   }
 }
 
-http.createServer(handleRequest).listen(4000)
+http.createServer(handleRequest).listen(process.env.PORT || 4000)
