@@ -29,18 +29,19 @@ http.createServer((req, res) => {
       })
         .on('end', () => {
           body = Buffer.concat(body).toString();
+          let payload;
           try {
-            const payload = JSON.parse(body)
-            if (payload.text === "" || !payload.text) {
-              console.log("payload: ", payload)
-              return sendJson(res, 400, { "error": "The note is either empty or malformed, try again." })
-            }
-            const newNote = { id: notes.length + 1, text: payload.text, createdAt: new Date().toISOString() }
-            notes.push(newNote);
-            sendJson(res, 201, { "message": "New note added successfully.", newNote })
+            payload = JSON.parse(body)
           } catch {
             sendJson(res, 400, { "error": "The note is malformed, try again." })
           }
+          if (!payload?.text || typeof (payload?.text) !== "string" || payload?.text.trim() === "") {
+            console.log("payload: ", payload)
+            return sendJson(res, 400, { "error": "The note is either empty or malformed, try again." })
+          }
+          const newNote = { id: notes.length + 1, text: payload.text, createdAt: new Date().toISOString() }
+          notes.push(newNote);
+          sendJson(res, 201, { "message": "New note added successfully.", newNote })
         })
     } else {
       sendJson(res, 405, { "error": "Method Not Allowed." }, { "Allow": "GET, POST" })
