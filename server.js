@@ -33,9 +33,9 @@ http.createServer((req, res) => {
           try {
             payload = JSON.parse(body)
           } catch {
-            sendJson(res, 400, { "error": "The note is malformed, try again." })
+            return sendJson(res, 400, { "error": "The note is malformed, try again." })
           }
-          if (!payload?.text || typeof (payload?.text) !== "string" || payload?.text.trim() === "") {
+          if (typeof (payload?.text) !== "string" || payload.text.trim() === "") {
             console.log("payload: ", payload)
             return sendJson(res, 400, { "error": "The note is either empty or malformed, try again." })
           }
