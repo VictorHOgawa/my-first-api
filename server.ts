@@ -1,6 +1,12 @@
-import http from 'node:http';
+import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 
-let notes = [
+interface NoteType {
+  id: number;
+  text: string;
+  createdAt: string
+}
+
+let notes: NoteType[] = [
   { "id": 1, "text": "This is the first note", "createdAt": "2026-10-06T13:24:00.000Z" },
   { "id": 2, "text": "This is the second note", "createdAt": "2026-10-06T13:25:00.000Z" }
 ];
@@ -13,12 +19,12 @@ const preflightCORSHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, DELETE", "Access-Control-Allow-Headers": "Content-type", "Access-Control-Max-Age": 600
 }
 
-export function sendJson(res, status, data, extraHeaders) {
+export function sendJson(res: ServerResponse, status: number, data: unknown, extraHeaders?: Record<string, string>) {
   res.writeHead(status, { "Content-Type": "application/json", ...CORS_ORIGIN_HEADERS, ...extraHeaders });
   res.end(JSON.stringify(data))
 }
 
-const handleHealth = ((req, res) => {
+const handleHealth = ((req: IncomingMessage, res: ServerResponse) => {
   if (req.method === "GET") {
     sendJson(res, 200, { "status": "ok" })
   } else {
@@ -26,23 +32,29 @@ const handleHealth = ((req, res) => {
   }
 })
 
-const handleNotes = ((req, res) => {
+const handleNotes = ((req: IncomingMessage, res: ServerResponse) => {
   if (req.method === "GET") {
     sendJson(res, 200, notes)
   } else if (req.method === "POST") {
-    let body = [];
+    const chunks: Buffer[] = [];
     req.on('data', chunk => {
-      body.push(chunk);
+      chunks.push(chunk);
     })
       .on('end', () => {
-        body = Buffer.concat(body).toString();
-        let payload;
+        const text = Buffer.concat(chunks).toString();
+        let payload: unknown;
+
         try {
-          payload = JSON.parse(body)
+          payload = JSON.parse(text)
         } catch {
           return sendJson(res, 400, { "error": "The note is malformed, try again." })
         }
-        if (typeof (payload?.text) !== "string" || payload.text.trim() === "") {
+
+        if (typeof payload !== "object" || payload === null) return sendJson(res, 400, { "error": "The note is malformed, try again." });
+        if (!("text" in payload)) return sendJson(res, 400, { "error": "The note is malformed, try again." });
+        if (typeof payload.text !== "string") return sendJson(res, 400, { "error": "The note is malformed, try again." });
+
+        if (payload.text.trim() === "") {
           return sendJson(res, 400, { "error": "The note is either empty or malformed, try again." })
         }
         idCounter += 1;
@@ -55,7 +67,7 @@ const handleNotes = ((req, res) => {
   }
 })
 
-const handleNoteById = ((req, res, idText) => {
+const handleNoteById = ((req: IncomingMessage, res: ServerResponse, idText: string) => {
   let chosenNote = notes.find((n) => n.id === Number(idText))
 
   if (!idText || !Number.isInteger(Number(idText))) return sendJson(res, 400, { "error": "ID is not a number" })
@@ -74,8 +86,8 @@ const handleNoteById = ((req, res, idText) => {
   }
 })
 
-const handleRequest = (req, res) => {
-  const url = new URL(req.url, "http://localhost").pathname;
+const handleRequest = (req: IncomingMessage, res: ServerResponse) => {
+  const url = new URL(req.url ?? "/", "http://localhost").pathname;
   // "/notes/2".split("/") → ["", "notes", "2"]: the leading "/" produces an empty first item
   const parts = url.split("/");
 
@@ -95,4 +107,4 @@ const handleRequest = (req, res) => {
   }
 }
 
-http.createServer(handleRequest).listen(process.env.PORT || 4000)
+http.createServer(handleRequest).listen(Number(process.env.PORT) || 4000)
