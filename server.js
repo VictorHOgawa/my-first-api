@@ -6,15 +6,15 @@ let notes = [
 ];
 let idCounter = notes.length;
 
-const sendJsonCORSHeaders = { "Access-Control-Allow-Origin": "http://localhost:3000" }
+const CORS_ORIGIN_HEADERS = { "Access-Control-Allow-Origin": "http://localhost:3000" }
 
 const preflightCORSHeaders = {
-  ...sendJsonCORSHeaders,
+  ...CORS_ORIGIN_HEADERS,
   "Access-Control-Allow-Methods": "GET, POST, DELETE", "Access-Control-Allow-Headers": "Content-type", "Access-Control-Max-Age": 600
 }
 
 export function sendJson(res, status, data, extraHeaders) {
-  res.writeHead(status, { "Content-Type": "application/json", ...sendJsonCORSHeaders, ...extraHeaders });
+  res.writeHead(status, { "Content-Type": "application/json", ...CORS_ORIGIN_HEADERS, ...extraHeaders });
   res.end(JSON.stringify(data))
 }
 
