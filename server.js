@@ -44,39 +44,25 @@ const handleNotes = ((req, res) => {
         sendJson(res, 201, { "message": "New note added successfully.", newNote })
       })
   } else {
-    sendJson(res, 405, { "error": "Method Not Allowed", "Allow": "GET, POST" })
+    sendJson(res, 405, { "error": "Method Not Allowed" }, { "Allow": "GET, POST" })
   }
 })
 
 const handleNoteById = ((req, res, idText) => {
   let chosenNote = notes.find((n) => n.id === Number(idText))
+
+  if (!idText || !Number.isInteger(Number(idText))) return sendJson(res, 400, { "error": "ID is not a number" })
+
+  if (!chosenNote) return sendJson(res, 404, { "error": "Note not found." })
+
   if (req.method === "GET") {
-    if (idText) {
-      if (!Number.isInteger(Number(idText))) {
-        sendJson(res, 400, { "error": "ID is not a number" })
-      } else if (!chosenNote) {
-        sendJson(res, 404, { "error": "Note not found." })
-      } else if (chosenNote) {
-        sendJson(res, 200, chosenNote)
-      }
-    } else {
-      sendJson(res, 400, { "error": "ID is required" })
-    }
+    sendJson(res, 200, chosenNote)
   } else if (req.method === "DELETE") {
-    if (idText) {
-      let chosenNote = notes.find((n) => n.id === Number(idText))
-      if (!Number.isInteger(Number(idText))) {
-        sendJson(res, 400, { "error": "ID is not a number" })
-      } else if (!chosenNote) {
-        sendJson(res, 404, { "error": "Note not found." })
-      } else if (chosenNote) {
-        notes = notes.filter((n) => n.id !== Number(idText))
-        // 204 No Content must not include a body
-        sendJson(res, 204, null)
-      }
-    }
+    notes = notes.filter((n) => n.id !== Number(idText))
+    // 204 No Content must not include a body
+    sendJson(res, 204, null)
   } else {
-    sendJson(res, 405, { "error": "Method Not Allowed.", "Allow": "GET, DELETE" })
+    sendJson(res, 405, { "error": "Method Not Allowed." }, { "Allow": "GET, DELETE" })
   }
 })
 
