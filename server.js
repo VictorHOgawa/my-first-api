@@ -9,6 +9,7 @@ let idCounter = notes.length;
 const sendJsonCORSHeaders = { "Access-Control-Allow-Origin": "http://localhost:3000" }
 
 const preflightCORSHeaders = {
+  ...sendJsonCORSHeaders,
   "Access-Control-Allow-Methods": "GET, POST, DELETE", "Access-Control-Allow-Headers": "Content-type", "Access-Control-Max-Age": 600
 }
 
