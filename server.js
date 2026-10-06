@@ -6,8 +6,14 @@ let notes = [
 ];
 let idCounter = notes.length;
 
+const sendJsonCORSHeaders = { "Access-Control-Allow-Origin": "http://localhost:3000" }
+
+const preflightCORSHeaders = {
+  "Access-Control-Allow-Methods": "GET, POST, DELETE", "Access-Control-Allow-Headers": "Content-type", "Access-Control-Max-Age": 600
+}
+
 export function sendJson(res, status, data, extraHeaders) {
-  res.writeHead(status, { "Content-Type": "application/json", ...extraHeaders });
+  res.writeHead(status, { "Content-Type": "application/json", ...sendJsonCORSHeaders, ...extraHeaders });
   res.end(JSON.stringify(data))
 }
 
@@ -59,8 +65,9 @@ const handleNoteById = ((req, res, idText) => {
     sendJson(res, 200, chosenNote)
   } else if (req.method === "DELETE") {
     notes = notes.filter((n) => n.id !== Number(idText))
+    res.writeHead(204);
     // 204 No Content must not include a body
-    sendJson(res, 204, null)
+    res.end();
   } else {
     sendJson(res, 405, { "error": "Method Not Allowed." }, { "Allow": "GET, DELETE" })
   }
@@ -70,6 +77,11 @@ const handleRequest = (req, res) => {
   const url = new URL(req.url, "http://localhost").pathname;
   // "/notes/2".split("/") → ["", "notes", "2"]: the leading "/" produces an empty first item
   const parts = url.split("/");
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, preflightCORSHeaders);
+    return res.end();
+  }
 
   if (url === "/health") {
     handleHealth(req, res);
