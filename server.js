@@ -9,6 +9,7 @@ export function sendJson(res, status, data, extraHeaders) {
   res.end(JSON.stringify(data))
 }
 
+
 http.createServer((req, res) => {
   const { method } = req;
   const url = new URL(req.url, 'http://localhost').pathname
@@ -21,8 +22,28 @@ http.createServer((req, res) => {
   } else if (url === "/notes") {
     if (method === "GET") {
       sendJson(res, 200, notes);
+    } else if (method === "POST") {
+      let body = [];
+      req.on('data', chunk => {
+        body.push(chunk);
+      })
+        .on('end', () => {
+          body = Buffer.concat(body).toString();
+          try {
+            const payload = JSON.parse(body)
+            if (payload.text === "" || !payload.text) {
+              console.log("payload: ", payload)
+              return sendJson(res, 400, { "error": "The note is either empty or malformed, try again." })
+            }
+            const newNote = { id: notes.length + 1, text: payload.text, createdAt: new Date().toISOString() }
+            notes.push(newNote);
+            sendJson(res, 201, { "message": "New note added successfully.", newNote })
+          } catch {
+            sendJson(res, 400, { "error": "The note is malformed, try again." })
+          }
+        })
     } else {
-      sendJson(res, 405, { "error": "Method Not Allowed." }, { "Allow": "GET" })
+      sendJson(res, 405, { "error": "Method Not Allowed." }, { "Allow": "GET, POST" })
     }
   } else {
     sendJson(res, 404, { "error": "Not Found" })
