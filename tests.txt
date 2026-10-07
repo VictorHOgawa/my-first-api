@@ -1,0 +1,16 @@
+curl.exe -s -o NUL -w "%{http_code}  GET /health (200)\n" http://localhost:4000/health
+curl.exe -s -o NUL -w "%{http_code}  GET /notes (200)\n" http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  GET /notes/1 (200)\n" http://localhost:4000/notes/1
+curl.exe -s -o NUL -w "%{http_code}  GET /notes/999 (404)\n" http://localhost:4000/notes/999
+curl.exe -s -o NUL -w "%{http_code}  GET /notes/abc (400)\n" http://localhost:4000/notes/abc
+curl.exe -s -o NUL -w "%{http_code}  POST valid (201)\n" --json '{\"text\":\"hello\"}' http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  POST {} (400)\n" --json '{}' http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  POST null (400)\n" --json 'null' http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  POST text:123 (400)\n" --json '{\"text\":123}' http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  POST bad JSON (400)\n" --json '{\"text\":' http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  POST spaces (400)\n" --json "@spaces.json" http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  DELETE /notes/1 (204)\n" -X DELETE http://localhost:4000/notes/1
+curl.exe -s -o NUL -w "%{http_code}  DELETE /notes/1 again (404)\n" -X DELETE http://localhost:4000/notes/1
+curl.exe -s -o NUL -w "%{http_code}  PUT /notes (404)\n" -X PUT http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  OPTIONS /notes (204)\n" -X OPTIONS -H "Origin: http://localhost:3000" http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  GET /nope (404)\n" http://localhost:4000/nope
