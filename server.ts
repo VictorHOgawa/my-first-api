@@ -1,16 +1,14 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
+import pg from 'pg';
+
+
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 
 interface NoteType {
   id: number;
   text: string;
   createdAt: string
 }
-
-let notes: NoteType[] = [
-  { "id": 1, "text": "This is the first note", "createdAt": "2026-10-06T13:24:00.000Z" },
-  { "id": 2, "text": "This is the second note", "createdAt": "2026-10-06T13:25:00.000Z" }
-];
-let idCounter = notes.length;
 
 const CORS_ORIGIN_HEADERS = { "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "http://localhost:3000" }
 
@@ -34,15 +32,17 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-app.get("/health", (req, res) => {
-  res.send({ "status": "ok" });
+app.get("/health", async (req, res) => {
+  const result = await pool.query("SELECT 1");
+  res.send({ "status": "ok", "db": "ok" });
 });
 
-app.get("/notes", (req, res) => {
-  res.send(notes)
+app.get("/notes", async (req, res) => {
+  const result = await pool.query('SELECT id, text, created_at AS "createdAt" FROM notes ORDER BY id');
+  res.send(result.rows)
 })
 
-app.post("/notes", (req, res) => {
+app.post("/notes", async (req, res) => {
   let payload: unknown;
   payload = req.body;
 
@@ -55,34 +55,36 @@ app.post("/notes", (req, res) => {
   if (payload.text.trim() === "") {
     return res.status(400).send({ "error": "The note is either empty or malformed, try again." })
   }
-  idCounter += 1;
 
-  const newNote = { "id": idCounter, "text": payload.text, "createdAt": new Date().toISOString() };
-  notes.push(newNote);
-  res.status(201).json(newNote);
+  const result = await pool.query('INSERT INTO notes (text) VALUES ($1) RETURNING id, text, created_at AS "createdAt"', [payload.text])
+  res.status(201).json(result.rows[0]);
 })
 
-app.get("/notes/:id", (req, res) => {
+app.get("/notes/:id", async (req, res) => {
   const noteId = req.params.id;
-  const chosenNote = notes.find((n) => n.id === Number(noteId))
   if (!noteId || !Number.isInteger(Number(noteId))) return res.status(400).send({ "error": "ID is not a number" })
+  const result = await pool.query('SELECT id, text, created_at AS "createdAt", category_id AS "categoryId" FROM notes WHERE id = $1', [Number(noteId)])
 
-  if (!chosenNote) return res.status(404).send({ "error": "Note not found." })
-  res.send(chosenNote)
+  if (result.rows.length === 0) return res.status(404).send({ "error": "Note not found." })
+  res.send(result.rows[0])
 })
 
-app.delete("/notes/:id", (req, res) => {
+app.delete("/notes/:id", async (req, res) => {
   const noteId = req.params.id;
-  const chosenNote = notes.find((n) => n.id === Number(noteId))
+
   if (!noteId || !Number.isInteger(Number(noteId))) return res.status(400).send({ "error": "ID is not a number" })
 
-  if (!chosenNote) return res.status(404).send({ "error": "Note not found." })
-  notes = notes.filter((n) => n.id !== Number(noteId))
+  const result = await pool.query('DELETE FROM notes WHERE id = $1', [Number(noteId)])
+  if (result.rowCount === 0) return res.status(404).send({ "error": "Note not found." })
   res.status(204).end();
 })
 
 app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
-  res.status(400).json({ error: "Invalid JSON" });
+  if (typeof err === "object" && err !== null && "type" in err && err.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Invalid JSON" });
+  }
+  console.error(err);
+  res.status(500).send({ "error": "Internal server error" });
 });
 
 app.use((req, res) => {
