@@ -1,8 +1,9 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
-import pg from 'pg';
+import { PrismaClient } from "./generated/prisma/client.ts";
+import { PrismaPg } from "@prisma/adapter-pg";
 
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 
 interface NoteType {
   id: number;
@@ -33,13 +34,13 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 app.get("/health", async (req, res) => {
-  const result = await pool.query("SELECT 1");
+  const result = await prisma.$queryRaw`SELECT 1`
   res.send({ "status": "ok", "db": "ok" });
 });
 
 app.get("/notes", async (req, res) => {
-  const result = await pool.query('SELECT id, text, created_at AS "createdAt" FROM notes ORDER BY id');
-  res.send(result.rows)
+  const notes = await prisma.note.findMany({ orderBy: { id: "asc" } })
+  res.send(notes)
 })
 
 app.post("/notes", async (req, res) => {
@@ -56,17 +57,17 @@ app.post("/notes", async (req, res) => {
     return res.status(400).send({ "error": "The note is either empty or malformed, try again." })
   }
 
-  const result = await pool.query('INSERT INTO notes (text) VALUES ($1) RETURNING id, text, created_at AS "createdAt"', [payload.text])
-  res.status(201).json(result.rows[0]);
+  const note = await prisma.note.create({ data: { text: payload.text } })
+  res.status(201).json(note);
 })
 
 app.get("/notes/:id", async (req, res) => {
   const noteId = req.params.id;
   if (!noteId || !Number.isInteger(Number(noteId))) return res.status(400).send({ "error": "ID is not a number" })
-  const result = await pool.query('SELECT id, text, created_at AS "createdAt", category_id AS "categoryId" FROM notes WHERE id = $1', [Number(noteId)])
+  const note = await prisma.note.findUnique({ where: { id: Number(noteId) } })
 
-  if (result.rows.length === 0) return res.status(404).send({ "error": "Note not found." })
-  res.send(result.rows[0])
+  if (!note) return res.status(404).send({ "error": "Note not found." })
+  res.send(note)
 })
 
 app.delete("/notes/:id", async (req, res) => {
@@ -74,8 +75,8 @@ app.delete("/notes/:id", async (req, res) => {
 
   if (!noteId || !Number.isInteger(Number(noteId))) return res.status(400).send({ "error": "ID is not a number" })
 
-  const result = await pool.query('DELETE FROM notes WHERE id = $1', [Number(noteId)])
-  if (result.rowCount === 0) return res.status(404).send({ "error": "Note not found." })
+  const note = await prisma.note.deleteMany({ where: { id: Number(noteId) } })
+  if (note.count === 0) return res.status(404).send({ "error": "Note not found." })
   res.status(204).end();
 })
 

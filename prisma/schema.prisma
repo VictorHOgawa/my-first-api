@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id    Int     @id @default(autoincrement())
+  name  String
+  notes Note[]
+
+  @@map("categories")
+}
+
+model Note {
+  id          Int         @id @default(autoincrement())
+  text        String
+  createdAt  DateTime    @default(now()) @db.Timestamptz(6) @map("created_at")
+  categoryId Int? @map("category_id")
+  category  Category? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("notes")
+}
