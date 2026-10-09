@@ -15,7 +15,7 @@ const CORS_ORIGIN_HEADERS = { "Access-Control-Allow-Origin": process.env.ALLOWED
 
 const preflightCORSHeaders = {
   ...CORS_ORIGIN_HEADERS,
-  "Access-Control-Allow-Methods": "GET, POST, DELETE", "Access-Control-Allow-Headers": "Content-type", "Access-Control-Max-Age": 600
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, PATCH", "Access-Control-Allow-Headers": "Content-type", "Access-Control-Max-Age": 600
 }
 
 const app = express();
@@ -39,7 +39,7 @@ app.get("/health", async (req, res) => {
 });
 
 app.get("/notes", async (req, res) => {
-  const notes = await prisma.note.findMany({ orderBy: { id: "asc" } })
+  const notes = await prisma.note.findMany({ orderBy: [{ pinned: "desc" }, { id: "asc" }] })
   res.send(notes)
 })
 
@@ -68,6 +68,30 @@ app.get("/notes/:id", async (req, res) => {
 
   if (!note) return res.status(404).send({ "error": "Note not found." })
   res.send(note)
+})
+
+app.patch("/notes/:id", async (req, res) => {
+  const noteId = req.params.id;
+  let payload: unknown;
+  payload = req.body;
+  if (!noteId || !Number.isInteger(Number(noteId))) return res.status(400).send({ "error": "ID is not a number" })
+
+  if (typeof payload !== "object" || payload === null) return res.status(400).send({ "error": "The note is malformed, try again." });
+
+  if (!("pinned" in payload)) return res.status(400).send({ "error": "The note is malformed, try again." });
+
+  if (typeof payload.pinned !== "boolean") return res.status(400).send({ "error": "The note is malformed, try again." });
+
+  try {
+    const note = await prisma.note.update({ where: { id: Number(noteId) }, data: { pinned: payload.pinned } })
+    return res.json(note)
+  } catch (e) {
+    if (typeof e === "object" && e !== null && "code" in e && e.code === "P2025") {
+      return res.status(404).json({ error: "Note not found." });
+    } else {
+      throw e;
+    }
+  }
 })
 
 app.delete("/notes/:id", async (req, res) => {

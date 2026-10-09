@@ -10,6 +10,9 @@ curl.exe -s -o NUL -w "%{http_code}  POST null (400)\n" --json 'null' http://loc
 curl.exe -s -o NUL -w "%{http_code}  POST text:123 (400)\n" --json '{\"text\":123}' http://localhost:4000/notes
 curl.exe -s -o NUL -w "%{http_code}  POST bad JSON (400)\n" --json '{\"text\":' http://localhost:4000/notes
 curl.exe -s -o NUL -w "%{http_code}  POST spaces (400)\n" --json "@spaces.json" http://localhost:4000/notes
+curl.exe -s -o NUL -w "%{http_code}  PATCH /notes/$id pinned (200)\n" -X PATCH --json '{\"pinned\":true}' http://localhost:4000/notes/$id
+curl.exe -s -o NUL -w "%{http_code}  PATCH pinned:yes (400)\n" -X PATCH --json '{\"pinned\":\"yes\"}' http://localhost:4000/notes/$id
+curl.exe -s -o NUL -w "%{http_code}  PATCH /notes/999999 (404)\n" -X PATCH --json '{\"pinned\":true}' http://localhost:4000/notes/999999
 curl.exe -s -o NUL -w "%{http_code}  DELETE /notes/$id (204)\n" -X DELETE http://localhost:4000/notes/$id
 curl.exe -s -o NUL -w "%{http_code}  DELETE /notes/$id again (404)\n" -X DELETE http://localhost:4000/notes/$id
 curl.exe -s -o NUL -w "%{http_code}  PUT /notes (404)\n" -X PUT http://localhost:4000/notes
