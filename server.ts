@@ -35,7 +35,7 @@ app.use(express.json());
 
 app.get("/health", async (req, res) => {
   const result = await prisma.$queryRaw`SELECT 1`
-  res.send({ "status": "ok", "db": "ok" });
+  res.send({ "status": "ok", "db": "ok", "uptime": process.uptime() });
 });
 
 app.get("/notes", async (req, res) => {
