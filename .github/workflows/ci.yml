@@ -17,3 +17,18 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npm run typecheck
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Deploy
+        run: ssh victor@2.29.50.96 "cd /var/www/api && git pull --ff-only && npm ci && npx prisma generate && sudo systemctl restart api"
+      - name: Health check
+        run: sleep 3 && curl -fsS https://api.victorogawa.com/health
